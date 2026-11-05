@@ -1,1 +1,78 @@
 protobuf==5.26.1
+import os
+import sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+class GhostbustersGatewayServer(BaseHTTPRequestHandler):
+    def _send_binary_response(self, bytes_data):
+        """Función auxiliar para enviar las respuestas binarias estructuradas"""
+        self.send_response(200)
+        self.send_header("Content-Type", "application/x-protobuf")
+        self.send_header("Content-Length", str(len(bytes_data)))
+        self.end_headers()
+        self.wfile.write(bytes_data)
+
+    def do_GET(self):
+        """Verificación básica de salud para saber si Render tiene el servidor vivo"""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write("Servidor Gateway de Cazafantasmas corriendo en la nube. Esperando peticiones .proto".encode("utf-8"))
+
+    def do_POST(self):
+        """Maneja las peticiones binarias (.proto) que envía el juego desde la tablet"""
+        content_length = int(self.headers.get('Content-Length', 0))
+        post_data = self.rfile.read(content_length) if content_length > 0 else b""
+        
+        # Analizamos la ruta (endpoint) a la que el juego intentó conectarse
+        path = self.path.lower()
+        print(f"[Gateway Log] Petición recibida en: {path} | Tamaño: {len(post_data)} bytes")
+
+        # --- FLUJO 1: INICIALIZACIÓN DEL JUEGO ---
+        if "initialization" in path:
+            print("[Gateway Log] Procesando solicitud de arranque (initialization_request)...")
+            
+            # NOTA DE MODDING EXTRA: Aquí es donde se decodificaría el archivo 'initialization_request.proto'
+            # Por ahora, para pruebas de bypass de arranque, construimos una respuesta binaria simulada básica.
+            # Estructura típica: status = 1 (OK), config_version = 1, server_time = actual
+            fake_response_payload = b"\x08\x01\x10\x01" # Formato binario crudo simulando serialización exitosa
+            
+            self._send_binary_response(fake_response_payload)
+            return
+
+        # --- FLUJO 2: INFORMACIÓN DEL DISPOSITIVO ---
+        elif "device" in path or "client_info" in path:
+            print("[Gateway Log] Procesando registro de dispositivo/cliente (client_info / static_device_info)...")
+            # Respuesta genérica exitosa para que el juego registre la tablet Lenovo y avance
+            fake_device_payload = b"\x08\x01" 
+            self._send_binary_response(fake_device_payload)
+            return
+
+        # --- FLUJO 3: CONFIGURACIÓN DE PUBLICIDAD ---
+        elif "ad_player" in path or "ad_data" in path:
+            print("[Gateway Log] Procesando bypass de publicidad (ad_player_config)...")
+            # Forzamos una respuesta vacía o deshabilitada para que el juego salte los anuncios sin trabarse
+            self._send_binary_response(b"\x08\x00")
+            return
+
+        # --- FLUJO GENERAL: RESPUESTA UNIVERSAL ---
+        else:
+            print(f"[Gateway Log] Petición no controlada. Usando plantilla de 'universal_response.proto'")
+            # Respuesta básica universal de éxito
+            universal_fallback = b"\x08\x01"
+            self._send_binary_response(universal_fallback)
+
+def run():
+    # Render asigna el puerto mediante variables de entorno en su contenedor
+    port = int(os.environ.get("PORT", 8080))
+    server_address = ('', port)
+    httpd = HTTPServer(server_address, GhostbustersGatewayServer)
+    print(f" Servidor Emulador de Servidor iniciado en el puerto {port}...")
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\n Apagando servidor falso...")
+        sys.exit(0)
+
+if __name__ == '__main__':
+    run()
