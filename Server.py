@@ -1,4 +1,4 @@
-  import os
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 class FakeGhostbustersServer(BaseHTTPRequestHandler):
