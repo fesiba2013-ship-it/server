@@ -1,4 +1,4 @@
-protobuf==5.26.1
-protobuf-compiler==1.0.2
-pure-protobuf==3.1.1
-googleapis-common-protos==1.63.0
+protobuf
+pure-protobuf
+googleapis-common-protos
+
